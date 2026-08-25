@@ -1,0 +1,19 @@
+pkgbase = termcap
+	pkgdesc = Record your terminal and export to text, SVG, GIF, PNG, JPEG, or MP4
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/gitUmaru/termcap
+	arch = any
+	license = MIT
+	makedepends = python-build
+	makedepends = python-installer
+	makedepends = python-wheel
+	makedepends = python-setuptools
+	depends = python
+	depends = python-pillow
+	depends = python-fonttools
+	optdepends = ffmpeg: MP4 and WebM video output, and frame extraction
+	source = termcap-0.1.0.tar.gz::https://github.com/gitUmaru/termcap/archive/refs/tags/v0.1.0.tar.gz
+	sha256sums = 3673142d5a7866b53ace1f16c2af23f38cce0720dc888566a403f2b5669a178f
+
+pkgname = termcap

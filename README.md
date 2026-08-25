@@ -12,13 +12,48 @@ No dependency on `asciinema`, `agg`, `svg-term`, or `vhs`.
 
 ## Install
 
+### Homebrew (macOS/Linux)
+
+```sh
+brew install gitUmaru/termcap/termcap
+```
+
+This taps this repository and installs a self-contained build (bundled Pillow +
+fonttools). To tap explicitly first:
+
+```sh
+brew tap gitUmaru/termcap https://github.com/gitUmaru/termcap
+brew install termcap
+```
+
+### Arch Linux (AUR)
+
+The [`packaging/aur`](packaging/aur) directory contains a `PKGBUILD`. Once
+published to the AUR you can install it with an AUR helper:
+
+```sh
+yay -S termcap        # or: paru -S termcap
+```
+
+To build straight from the packaging files:
+
+```sh
+git clone https://github.com/gitUmaru/termcap.git
+cd termcap/packaging/aur
+makepkg -si
+```
+
+### pip / from source
+
 ```sh
 git clone https://github.com/gitUmaru/termcap.git
 cd termcap
 python3 -m pip install .
 ```
 
-For MP4 output, also install ffmpeg (`brew install ffmpeg`, `apt install ffmpeg`, …).
+Or grab a built wheel from the [Releases](https://github.com/gitUmaru/termcap/releases) page.
+
+For MP4/WebM output, also install ffmpeg (`brew install ffmpeg`, `apt install ffmpeg`, …).
 
 Recording uses a POSIX pseudo-terminal — macOS, Linux, and WSL. Everything else
 (rendering casts to any format) is fully cross-platform.
