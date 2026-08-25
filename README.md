@@ -25,6 +25,7 @@ Recording uses a POSIX pseudo-terminal — macOS, Linux, and WSL. Everything els
 
 ```
 termcap rec [file.cast] [-t TITLE] [-c CMD ...]   Record a session (asciicast v2)
+termcap play <cast> [--speed N] [--idle-limit S]  Replay a cast in the terminal
 termcap txt <cast> [out|-] [--mode screen|raw]    Cast -> plain text
 termcap gif <cast> [out.gif]                      Cast -> animated GIF
 termcap svg <cast> [out.svg]                      Cast -> animated SVG (native)

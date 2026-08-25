@@ -126,6 +126,18 @@ def cmd_mp4(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_play(args: argparse.Namespace) -> int:
+    from termcap.player import play
+
+    cast = _load(args)
+    idle = args.idle_limit if args.idle_limit and args.idle_limit > 0 else None
+    try:
+        play(cast, speed=args.speed, idle_limit=idle)
+    except KeyboardInterrupt:
+        return 130
+    return 0
+
+
 def cmd_doctor(args: argparse.Namespace) -> int:
     ok = True
     try:
@@ -206,6 +218,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="'screen' = final screen; 'raw' = full transcript",
     )
     pt.set_defaults(func=cmd_txt)
+
+    ppl = sub.add_parser("play", help="replay a cast in the terminal")
+    ppl.add_argument("input", help="input .cast file")
+    ppl.add_argument("--speed", type=float, default=1.0, help="playback speed multiplier")
+    ppl.add_argument("--idle-limit", type=float, default=2.0, help="cap idle gaps, seconds (0 = no cap)")
+    ppl.set_defaults(func=cmd_play)
 
     pd = sub.add_parser("doctor", help="check backends/dependencies")
     pd.set_defaults(func=cmd_doctor)
