@@ -1,85 +1,96 @@
 # termcap
 
-A single-file wrapper that records your terminal and exports it to **GIF, SVG, MP4, PNG, JPEG**, or a plain **text session** — from one recording.
+Record your terminal and export it to **text, SVG, GIF, PNG, JPEG, or MP4** — with a
+**self-contained core**. The PTY session recorder, the asciicast v2 reader/writer, the
+ANSI/VT terminal emulator, and the text/SVG renderers are all implemented in this
+package. GIF/PNG/JPEG are rendered with [Pillow]; MP4 is the only feature that shells
+out to `ffmpeg` at runtime (encoding H.264 in pure Python isn't practical).
 
-It ties together well-established tools behind one command so you don't have to remember each one's flags:
-
-| Need                        | Backend            |
-| --------------------------- | ------------------ |
-| Text session (`.cast`)      | `asciinema`        |
-| Animated GIF                | `agg`              |
-| Animated SVG                | `svg-term-cli`     |
-| Direct-to-SVG recording     | `termtosvg`        |
-| Scripted GIF/MP4/WebM/PNG   | `vhs`              |
-| Video / format conversion   | `ffmpeg`           |
-| Native pixel capture (macOS)| `screencapture`    |
+No dependency on `asciinema`, `agg`, `svg-term`, or `vhs`.
 
 ## Install
 
-### 1. Backends
-
-macOS (Homebrew):
-
-```sh
-brew install asciinema agg vhs ffmpeg
-npm  install -g svg-term-cli
-pipx install termtosvg
-```
-
-`ffmpeg` and `screencapture` (macOS) are used for video and native pixel capture.
-The record → GIF/SVG/MP4/frame pipeline is cross-platform (macOS, Linux, WSL).
-Only `shot`, `shotwin`, and `screenrec` are macOS-only.
-
-### 2. The script
-
 ```sh
 git clone https://github.com/gitUmaru/termcap.git
-install -m 0755 termcap/bin/termcap ~/bin/termcap   # or anywhere on your PATH
+cd termcap
+python3 -m pip install .
 ```
 
-Make sure the install location is on your `PATH`.
+For MP4 output, also install ffmpeg (`brew install ffmpeg`, `apt install ffmpeg`, …).
+
+Recording uses a POSIX pseudo-terminal — macOS, Linux, and WSL. Everything else
+(rendering casts to any format) is fully cross-platform.
 
 ## Usage
 
 ```
-termcap rec  [file.cast] [-- command]     Record a text session (asciicast v2)
-termcap play <file.cast>                  Replay a recording in the terminal
-termcap gif  <file.cast> [out.gif]        Cast  -> animated GIF        (agg)
-termcap svg  <file.cast> [out.svg]        Cast  -> animated SVG        (svg-term)
-termcap mp4  <file.cast> [out.mp4]        Cast  -> MP4 video           (agg+ffmpeg)
-termcap frame <in.gif|in.mp4> [out.png]   Extract a still (png/jpeg)   (ffmpeg)
-
-termcap svgrec [file.svg] [-- command]    Record directly to SVG       (termtosvg)
-termcap tape <file.tape>                  Run a vhs script -> its output(s)
-
-termcap shot [out.png]                    macOS pixel screenshot (interactive)
-termcap shotwin [out.png]                 macOS screenshot of a clicked window
-termcap screenrec [out.mov]               macOS screen video recording
-
-termcap doctor                            Check that all backends are present
-termcap help                              Show help
+termcap rec [file.cast] [-t TITLE] [-c CMD ...]   Record a session (asciicast v2)
+termcap txt <cast> [out|-] [--mode screen|raw]    Cast -> plain text
+termcap gif <cast> [out.gif]                      Cast -> animated GIF
+termcap svg <cast> [out.svg]                      Cast -> animated SVG (native)
+termcap png <cast> [out.png] [--jpeg]             Cast -> still image (PNG/JPEG)
+termcap mp4 <cast> [out.mp4]                       Cast -> MP4 video (needs ffmpeg)
+termcap doctor                                     Check dependencies
 ```
+
+Common render options: `--fps`, `--idle-limit` (cap dead time), `--speed`,
+`--font-size`.
 
 ### Example
 
 ```sh
-termcap rec demo.cast          # record; press ctrl-d to stop
-termcap gif   demo.cast        # -> demo.gif
-termcap svg   demo.cast        # -> demo.svg
-termcap mp4   demo.cast        # -> demo.mp4
-termcap frame demo.gif poster.png
+termcap rec demo.cast              # record; exit the shell (ctrl-d) to stop
+termcap txt demo.cast -            # print the final screen
+termcap gif demo.cast              # -> demo.gif
+termcap svg demo.cast              # -> demo.svg
+termcap png demo.cast poster.png
+termcap mp4 demo.cast --fps 12     # -> demo.mp4
+
+# record a single command instead of an interactive shell:
+termcap rec build.cast -c make -j4
 ```
 
-One `.cast` recording feeds every format.
+One `.cast` recording feeds every output format.
+
+## How it works
+
+```
+                       ┌────────────┐
+  your shell ⇄ PTY ───▶│ recorder   │──▶ .cast (asciicast v2, native writer)
+                       └────────────┘
+                                          │
+                            ┌─────────────┼──────────────┐
+                            ▼             ▼              ▼
+                     terminal.py    render/svg.py   render/raster.py
+                    (ANSI emulator)  (native SVG)    (Pillow: GIF/PNG/JPEG)
+                            │                              │
+                            ▼                              ▼
+                      render/text.py                render/video.py
+                       (plain text)                (frames → ffmpeg → MP4)
+```
+
+- `cast.py` — asciicast v2 reader/writer.
+- `recorder.py` — stdlib `pty` session recorder (POSIX).
+- `terminal.py` — VT100/xterm-subset emulator producing a grid of styled cells.
+- `palette.py` — xterm 256-color table + SGR attribute handling.
+- `render/` — text, SVG, raster (GIF/PNG/JPEG), and video (MP4) backends.
+
+## Development
+
+```sh
+python3 -m pip install -e ".[dev]"
+pytest
+```
 
 ## Notes
 
-- **asciicast v2, not v3:** `asciinema` 3.x records v3 by default, but `agg` and
-  `svg-term` currently consume v2. `termcap rec` forces v2 so exports always work.
-  If you have a v3 cast, run `asciinema convert` first.
-- **macOS permissions:** `shot` / `shotwin` / `screenrec` need Screen Recording
-  permission the first time (System Settings → Privacy & Security → Screen Recording).
+- **asciicast v2, not v3:** `asciinema` 3.x records v3 by default. termcap reads/writes
+  v2 for portability; convert a v3 cast first with `asciinema convert`.
+- **Fonts:** the raster renderer looks for a monospaced TrueType font (SF Mono, Menlo,
+  DejaVu Sans Mono, Consolas). Override with the `TERMCAP_FONT` environment variable.
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+[Pillow]: https://python-pillow.org/
