@@ -15,16 +15,19 @@ No dependency on `asciinema`, `agg`, `svg-term`, or `vhs`.
 ### Homebrew (macOS/Linux)
 
 ```sh
+brew tap gitUmaru/termcap
+brew install termcap
+```
+
+Or in a single command:
+
+```sh
 brew install gitUmaru/termcap/termcap
 ```
 
-This taps this repository and installs a self-contained build (bundled Pillow +
-fonttools). To tap explicitly first:
-
-```sh
-brew tap gitUmaru/termcap https://github.com/gitUmaru/termcap
-brew install termcap
-```
+The formula lives in the [gitUmaru/homebrew-termcap](https://github.com/gitUmaru/homebrew-termcap)
+tap (included here as the `homebrew-termcap` submodule) and installs a
+self-contained build (bundled Pillow + fonttools).
 
 ### Arch Linux (AUR)
 

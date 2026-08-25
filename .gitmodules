@@ -1,0 +1,3 @@
+[submodule "homebrew-termcap"]
+	path = homebrew-termcap
+	url = https://github.com/gitUmaru/homebrew-termcap.git
