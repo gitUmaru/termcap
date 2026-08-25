@@ -6,6 +6,7 @@ Text is real <text> so it stays crisp and selectable.
 """
 from __future__ import annotations
 
+import os
 from typing import List
 from xml.sax.saxutils import escape
 
@@ -17,7 +18,13 @@ DEFAULT_BG = "#1e1e1e"
 CW = 8.4   # cell width in px (approx for a 14px monospaced font)
 CH = 17.0  # cell height in px
 PAD = 10.0
-FONT = 'ui-monospace, SFMono-Regular, Menlo, "DejaVu Sans Mono", monospace'
+# Include Nerd Font families so viewers with them installed get icon glyphs.
+_DEFAULT_FONT = (
+    '"JetBrainsMono Nerd Font", "JetBrainsMonoNL Nerd Font", '
+    '"MesloLGS NF", "Symbols Nerd Font", "Symbols Nerd Font Mono", '
+    'ui-monospace, SFMono-Regular, Menlo, "DejaVu Sans Mono", monospace'
+)
+FONT = os.environ.get("TERMCAP_SVG_FONT", _DEFAULT_FONT)
 FONT_SIZE = 14
 
 

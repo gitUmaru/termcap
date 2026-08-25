@@ -91,8 +91,13 @@ pytest
 
 - **asciicast v2, not v3:** `asciinema` 3.x records v3 by default. termcap reads/writes
   v2 for portability; convert a v3 cast first with `asciinema convert`.
-- **Fonts:** the raster renderer looks for a monospaced TrueType font (SF Mono, Menlo,
-  DejaVu Sans Mono, Consolas). Override with the `TERMCAP_FONT` environment variable.
+- **Fonts & Nerd Font icons:** the raster renderer auto-selects an installed
+  monospaced Nerd Font (e.g. JetBrainsMono Nerd Font, MesloLGS NF) as the primary
+  so icon glyphs render instead of empty boxes. Characters missing from the primary
+  font are drawn from a per-glyph fallback chain across your other installed icon
+  fonts. Force a specific font with `TERMCAP_FONT=/path/to/Font.ttf`. For SVG output,
+  the font is named in CSS (viewers need it installed); override the family list with
+  `TERMCAP_SVG_FONT`.
 
 ## License
 

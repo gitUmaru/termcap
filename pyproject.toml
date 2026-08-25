@@ -21,6 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "Pillow>=9.2",
+    "fonttools>=4.0",
 ]
 
 [project.optional-dependencies]
