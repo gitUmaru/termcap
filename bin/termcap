@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+#
+# termcap — unified terminal capture wrapper
+#
+# Records terminal sessions and exports to GIF / SVG / MP4 / PNG / JPEG,
+# plus native macOS pixel screenshots & screen recordings.
+#
+# Backends: asciinema, agg, svg-term, termtosvg, vhs, ffmpeg, screencapture
+#
+set -euo pipefail
+
+PROG="$(basename "$0")"
+
+# ------------------------------------------------------------------ helpers
+die()  { printf '%s: error: %s\n' "$PROG" "$*" >&2; exit 1; }
+info() { printf '\033[36m▸\033[0m %s\n' "$*" >&2; }
+have() { command -v "$1" >/dev/null 2>&1; }
+need() { have "$1" || die "'$1' not found on PATH. Install it first."; }
+
+# default output stem (timestamped) if the user gives none
+stamp() { date +%Y%m%d-%H%M%S; }
+
+# strip a known media extension, returning the bare stem
+stem() { echo "${1%.*}"; }
+
+# ------------------------------------------------------------------ usage
+usage() {
+  cat <<EOF
+$PROG — capture your terminal and export to any format
+
+USAGE
+  $PROG rec  [file.cast] [-- command]     Record a text session (asciicast v2)
+  $PROG play <file.cast>                  Replay a recording in the terminal
+  $PROG gif  <file.cast> [out.gif]        Cast  -> animated GIF        (agg)
+  $PROG svg  <file.cast> [out.svg]        Cast  -> animated SVG        (svg-term)
+  $PROG mp4  <file.cast> [out.mp4]        Cast  -> MP4 video           (agg+ffmpeg)
+  $PROG frame <in.gif|in.mp4> [out.png]   Extract a still (png/jpeg)   (ffmpeg)
+
+  $PROG svgrec [file.svg] [-- command]    Record directly to SVG       (termtosvg)
+  $PROG tape <file.tape>                  Run a vhs script -> its output(s)
+
+  $PROG shot [out.png]                    macOS pixel screenshot (interactive)
+  $PROG shotwin [out.png]                 macOS screenshot of a clicked window
+  $PROG screenrec [out.mov]               macOS screen video recording
+
+  $PROG doctor                            Check that all backends are present
+  $PROG help                              Show this help
+
+NOTES
+  * 'rec' records asciicast v2 for best compatibility with gif/svg/mp4 exporters.
+  * Output format for 'frame' is chosen from the extension (.png or .jpg).
+  * macOS capture commands need Screen Recording permission (System Settings
+    -> Privacy & Security -> Screen Recording) the first time.
+
+EXAMPLES
+  $PROG rec demo.cast              # record, exit with ctrl-d
+  $PROG gif demo.cast             # -> demo.gif
+  $PROG svg demo.cast out.svg
+  $PROG mp4 demo.cast             # -> demo.mp4
+  $PROG frame demo.gif poster.jpg
+EOF
+}
+
+# ------------------------------------------------------------------ commands
+cmd_rec() {
+  need asciinema
+  local out="" ; local -a passthru=()
+  # first non-flag arg before -- is the output file
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --) shift; passthru=("$@"); break ;;
+      *)  out="$1"; shift ;;
+    esac
+  done
+  [ -n "$out" ] || out="cast-$(stamp).cast"
+  info "Recording to $out  (asciicast v2, exit with ctrl-d)"
+  if [ "${#passthru[@]}" -gt 0 ]; then
+    asciinema rec -f asciicast-v2 --overwrite -c "${passthru[*]}" "$out"
+  else
+    asciinema rec -f asciicast-v2 --overwrite "$out"
+  fi
+  info "Saved $out"
+}
+
+cmd_play() {
+  need asciinema
+  [ $# -ge 1 ] || die "usage: $PROG play <file.cast>"
+  asciinema play "$1"
+}
+
+cmd_gif() {
+  need agg
+  [ $# -ge 1 ] || die "usage: $PROG gif <file.cast> [out.gif]"
+  local in="$1"; local out="${2:-$(stem "$in").gif}"
+  info "GIF: $in -> $out"
+  agg "$in" "$out"
+  info "Saved $out"
+}
+
+cmd_svg() {
+  need svg-term
+  [ $# -ge 1 ] || die "usage: $PROG svg <file.cast> [out.svg]"
+  local in="$1"; local out="${2:-$(stem "$in").svg}"
+  info "SVG: $in -> $out"
+  svg-term --in "$in" --out "$out"
+  info "Saved $out"
+}
+
+cmd_mp4() {
+  need agg; need ffmpeg
+  [ $# -ge 1 ] || die "usage: $PROG mp4 <file.cast> [out.mp4]"
+  local in="$1"; local out="${2:-$(stem "$in").mp4}"
+  local tmp; tmp="$(mktemp -t termcap).gif"
+  info "MP4: $in -> (gif) -> $out"
+  agg "$in" "$tmp"
+  # yuv420p + even dimensions for broad player compatibility
+  ffmpeg -y -i "$tmp" \
+    -movflags +faststart -pix_fmt yuv420p \
+    -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" "$out" </dev/null
+  rm -f "$tmp"
+  info "Saved $out"
+}
+
+cmd_frame() {
+  need ffmpeg
+  [ $# -ge 1 ] || die "usage: $PROG frame <in.gif|in.mp4> [out.png]"
+  local in="$1"; local out="${2:-$(stem "$in").png}"
+  info "Frame: $in -> $out (first frame)"
+  ffmpeg -y -i "$in" -frames:v 1 "$out" </dev/null
+  info "Saved $out"
+}
+
+cmd_svgrec() {
+  need termtosvg
+  local out="" ; local -a passthru=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --) shift; passthru=("$@"); break ;;
+      *)  out="$1"; shift ;;
+    esac
+  done
+  [ -n "$out" ] || out="svgrec-$(stamp).svg"
+  info "Recording directly to SVG: $out  (exit with ctrl-d)"
+  if [ "${#passthru[@]}" -gt 0 ]; then
+    termtosvg "$out" -c "${passthru[*]}"
+  else
+    termtosvg "$out"
+  fi
+  info "Saved $out"
+}
+
+cmd_tape() {
+  need vhs
+  [ $# -ge 1 ] || die "usage: $PROG tape <file.tape>"
+  info "Running vhs tape: $1"
+  vhs "$1"
+}
+
+cmd_shot() {
+  need screencapture
+  local out="${1:-shot-$(stamp).png}"
+  info "Interactive screenshot -> $out (drag a region or press space for a window)"
+  screencapture -i "$out"
+  [ -f "$out" ] && info "Saved $out" || info "Cancelled"
+}
+
+cmd_shotwin() {
+  need screencapture
+  local out="${1:-window-$(stamp).png}"
+  info "Click the window to capture -> $out"
+  screencapture -iW "$out"
+  [ -f "$out" ] && info "Saved $out" || info "Cancelled"
+}
+
+cmd_screenrec() {
+  need screencapture
+  local out="${1:-screenrec-$(stamp).mov}"
+  info "Screen recording -> $out  (stop with ctrl-c)"
+  screencapture -v "$out"
+  info "Saved $out"
+}
+
+cmd_doctor() {
+  local ok=0 miss=0
+  for t in asciinema agg svg-term termtosvg vhs ffmpeg screencapture; do
+    if have "$t"; then printf "  \033[32m✔\033[0m %-14s %s\n" "$t" "$(command -v "$t")"; ok=$((ok+1))
+    else printf "  \033[31m✘\033[0m %-14s missing\n" "$t"; miss=$((miss+1)); fi
+  done
+  printf "\n%d present, %d missing\n" "$ok" "$miss"
+  [ "$miss" -eq 0 ] || info "Note: screencapture is macOS-only; ignore if you're on Linux/Windows."
+}
+
+# ------------------------------------------------------------------ dispatch
+[ $# -ge 1 ] || { usage; exit 0; }
+sub="$1"; shift
+case "$sub" in
+  rec|record) cmd_rec "$@" ;;
+  play)       cmd_play "$@" ;;
+  gif)        cmd_gif "$@" ;;
+  svg)        cmd_svg "$@" ;;
+  mp4)        cmd_mp4 "$@" ;;
+  frame)      cmd_frame "$@" ;;
+  svgrec)     cmd_svgrec "$@" ;;
+  tape)       cmd_tape "$@" ;;
+  shot)       cmd_shot "$@" ;;
+  shotwin)    cmd_shotwin "$@" ;;
+  screenrec)  cmd_screenrec "$@" ;;
+  doctor)     cmd_doctor ;;
+  help|-h|--help) usage ;;
+  *) die "unknown command '$sub' (run '$PROG help')" ;;
+esac

@@ -1,0 +1,14 @@
+# Generated capture artifacts
+*.cast
+*.gif
+*.svg
+*.mp4
+*.webm
+*.mov
+*.png
+*.jpg
+*.jpeg
+
+# OS / editor cruft
+.DS_Store
+*.swp
