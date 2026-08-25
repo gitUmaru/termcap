@@ -1,5 +1,7 @@
 # termcap
 
+[![CI](https://github.com/gitUmaru/termcap/actions/workflows/ci.yml/badge.svg)](https://github.com/gitUmaru/termcap/actions/workflows/ci.yml)
+
 Record your terminal and export it to **text, SVG, GIF, PNG, JPEG, or MP4** — with a
 **self-contained core**. The PTY session recorder, the asciicast v2 reader/writer, the
 ANSI/VT terminal emulator, and the text/SVG renderers are all implemented in this
