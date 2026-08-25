@@ -138,6 +138,38 @@ def cmd_play(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_webm(args: argparse.Namespace) -> int:
+    from termcap.render.video import render_webm
+
+    cast = _load(args)
+    out = args.output or _default_out(args.input, "webm")
+    _info(f"WebM: {args.input} -> {out}")
+    try:
+        render_webm(
+            cast, out, fps=args.fps, font_size=args.font_size,
+            idle_limit=args.idle_limit, speed=args.speed,
+        )
+    except RuntimeError as exc:
+        _err(str(exc))
+        return 1
+    _info(f"saved {out}")
+    return 0
+
+
+def cmd_frame(args: argparse.Namespace) -> int:
+    from termcap.render.video import extract_frame
+
+    out = args.output or (os.path.splitext(args.input)[0] + ".png")
+    _info(f"frame: {args.input} @ {args.at}s -> {out}")
+    try:
+        extract_frame(args.input, out, at=args.at)
+    except RuntimeError as exc:
+        _err(str(exc))
+        return 1
+    _info(f"saved {out}")
+    return 0
+
+
 def cmd_doctor(args: argparse.Namespace) -> int:
     ok = True
     try:
@@ -202,6 +234,16 @@ def build_parser() -> argparse.ArgumentParser:
     pm = sub.add_parser("mp4", help="cast -> MP4 (needs ffmpeg)")
     add_render_common(pm)
     pm.set_defaults(func=cmd_mp4)
+
+    pw = sub.add_parser("webm", help="cast -> WebM VP9 (needs ffmpeg)")
+    add_render_common(pw)
+    pw.set_defaults(func=cmd_webm)
+
+    pf = sub.add_parser("frame", help="extract a still (PNG/JPEG) from a GIF/MP4/WebM")
+    pf.add_argument("input", help="input media file (gif/mp4/webm)")
+    pf.add_argument("output", nargs="?", help="output path (default: derived .png)")
+    pf.add_argument("--at", type=float, default=0.0, help="timestamp in seconds (default 0)")
+    pf.set_defaults(func=cmd_frame)
 
     pp = sub.add_parser("png", help="cast -> still image (PNG/JPEG)")
     pp.add_argument("input", help="input .cast file")

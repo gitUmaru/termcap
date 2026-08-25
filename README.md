@@ -33,6 +33,8 @@ termcap gif <cast> [out.gif]                      Cast -> animated GIF
 termcap svg <cast> [out.svg]                      Cast -> animated SVG (native)
 termcap png <cast> [out.png] [--jpeg]             Cast -> still image (PNG/JPEG)
 termcap mp4 <cast> [out.mp4]                       Cast -> MP4 video (needs ffmpeg)
+termcap webm <cast> [out.webm]                     Cast -> WebM VP9 video (needs ffmpeg)
+termcap frame <media> [out.png] [--at S]           Extract a still from GIF/MP4/WebM
 termcap doctor                                     Check dependencies
 ```
 
